@@ -1,0 +1,64 @@
+FORMAT: 1A
+HOST: http://polls.apiblueprint.org/
+
+# TigerPack API
+
+TigerPack API
+
+## User [/user]
+
+### Get User [GET]
+
+Get user's data.
+
++ Response 200 (application/json)
+
+        [
+            {
+                "user_id": "507f1f77bcf86cd799439011",
+                "email": "example@gmail.com",
+                "name": "Jeff Bezos",
+                "class_year": 2010
+            }
+        ]
+
+### Create User [POST]
+
+Create a new user in the database as the final step in sign-up.
+
++ Request (application/json)
+
+        {
+            "name": "Jeff Bezos",
+            "class_year": 2010
+            "latitude": 42.253337,
+            "longitude": -70.853208
+        }
+
++ Response 201 (application/json)
+
+    + Headers
+
+            Location: /user
+
+    + Body
+
+            {
+                "question": "Favourite programming language?",
+                "published_at": "2015-08-05T08:40:51.620Z",
+                "choices": [
+                    {
+                        "choice": "Swift",
+                        "votes": 0
+                    }, {
+                        "choice": "Python",
+                        "votes": 0
+                    }, {
+                        "choice": "Objective-C",
+                        "votes": 0
+                    }, {
+                        "choice": "Ruby",
+                        "votes": 0
+                    }
+                ]
+            }
