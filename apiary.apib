@@ -1,27 +1,56 @@
 FORMAT: 1A
-HOST: http://polls.apiblueprint.org/
+HOST: pp.apiary.io/tigerpack
 
 # TigerPack API
 
 TigerPack API
 
-## User [/user]
 
-### Get User [GET]
 
-Get user's data.
+
+
+## User [/users{?user_id}]
+
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
+### Get specific user [GET]
+
+Get a specific user by `user_id`.
 
 + Response 200 (application/json)
-
+        
         [
             {
                 "user_id": "507f1f77bcf86cd799439011",
-                "email": "example@gmail.com",
                 "name": "Jeff Bezos",
-                "class_year": 2010
+                "year": 2010
             }
         ]
 
+
+
+## Users Collection [/users]
+
+### Get all users [GET]
+
+Get all users.
+
++ Response 200 (application/json)
+        
+        [
+            {
+                "user_id": "507f1f77bcf86cd799439011",
+                "name": "Jeff Bezos",
+                "year": 2010
+            },
+            {
+                "user_id": "bd4523423ce",
+                "name": "Bob Mueller",
+                "year": 1966
+            }
+        ]
+            
 ### Create User [POST]
 
 Create a new user in the database as the final step in sign-up.
@@ -30,35 +59,194 @@ Create a new user in the database as the final step in sign-up.
 
         {
             "name": "Jeff Bezos",
-            "class_year": 2010
-            "latitude": 42.253337,
-            "longitude": -70.853208
+            "year": 2010,
+            "email": "example@gmail.com",
+            "lat": 42.253337,
+            "long": -70.853208
+        }
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+                "name": "Jeff Bezos",
+                "email": "example@gmail.com",
+                "class_year": 2010
+                "last_checkin": 1495004357,
+                "latitude": 42.253337,
+                "longitude": -70.853208
+            }
+
+
+## Friends [/user/friends/{?user_id}]
+### Get Friends [GET]
+
+Get user's current friends, and potential friends who've sent the user a friend request.
+
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
++ Response 200 (application/json)
+
+        {
+            "incoming_invites": [
+                {
+                    "user_id":"5678765767D",
+                    "name": "Alice Boots",
+                    "year": 2010
+                },
+                {
+                    "user_id":"BA678D98676",
+                    "name": "Bob Xavier",
+                    "year": 2012
+                }
+            ],
+            "friends":[
+                {
+                    "user_id":"7430897452",
+                    "name": "Xander Albert",
+                    "year": 1998
+                },
+                {
+                    "user_id":"BA678D98676",
+                    "name": "Ace Smith",
+                    "year": 2007
+                }
+            ]
+        }
+
+### Update friend-status [POST]
+
+Set friendship status between the user and the target user.  Use to respond to friend requests or remove friends.
+`friendship` is a boolean stating whether the two users should/shouldn't end up as friends.
+
++ Request (application/json)
+
+        {
+            "user_id": "2589B345904875",
+            "friend_id": "8790408A32"
+            "friendship": True
         }
 
 + Response 201 (application/json)
 
     + Headers
 
-            Location: /user
+            Location: /users/friends
+
+## Check-ins [/check-ins{?user_id}]
+### Get check-ins [GET]
+
+Get check-ins for each of the user's friends who have location tracking on.
+
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
++ Response 200 (application/json)
+
+        [
+            {
+                "user_id":"5678765767D",
+                "name": "Alice Boots",
+                "year": 2010,
+                "zone": "Terrace"
+            },
+            {
+                "user_id":"2354364623",
+                "name": "Bob Cox",
+                "year": 2011,
+                "zone": "20th"
+            },
+            {
+                "user_id":"980798700",
+                "name": "Ryan Brown",
+                "year": 1999,
+                "zone": "1.4 miles"
+            }
+        ]
+
+### Send check-in [POST]
+
+Save user's current geolocation to server
+
++ Request (application/json)
+
+        {
+            "user_id": "2589B345904875",
+            "name":"Jeff Bezos",
+            "year": 2010,
+            "lat": 42.253337,
+            "long": -70.853208
+        }
+
++ Response 201 (application/json)
+
+    + Headers
+
+            Location: /check-ins
+            
+            
+### Delete check-in [DELETE]
+
+Delete user's check-in from server.
+
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
++ Response 200 (application/json)
+
+    + Headers
+
+            Location: /check-ins
+
+            
+## Groups [/groups/{user_id}]
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
+### Get Groups [GET]
+
+Get all group chats the user is a member of.  A group chat's `members` field excudes the current user
+
++ Response 200 (application/json)
+
+        [
+            {
+                "group_id": "507f1f77bcf86cd799439011",
+                "name": "Ski Team",
+                "members": [
+                    {
+                        "name":"Jeff Bezos",
+                        "user_id":"507f1f77bcf86cd799439011",
+                        "initials":"JB",
+                        "class_year":2010
+                    },
+                    {
+                        "name":"Bob Smith",
+                        "user_id":"507f1f77bcf86cd799439012",
+                        "initials":"BS",
+                        "class_year":2007
+                    }
+                
+                ]
+            }
+        ]
+
+### Create Group [POST]
+
+Create a new user in the database as the final step in sign-up.
+
++ Request (application/json)
+
+        {
+            "name": "Ski team"
+        }
+
++ Response 201 (application/json)
 
     + Body
 
             {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
-                    }
-                ]
+                
             }
