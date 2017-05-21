@@ -1,0 +1,30 @@
+{
+  "name": "tigerpack",
+  "version": "0.0.1",
+  "author": "Valeri Karpov <val@karpov.io>",
+  "dependencies": {
+    "archetype-js": "0.6.1",
+    "debug": "2.6.7",
+    "express": "4.15.3",
+    "mongodb": "2.2.26"
+  },
+  "devDependencies": {
+    "mocha": "3.4.1",
+    "standard": "7.1.2",
+    "superagent": "3.5.2"
+  },
+  "engines": {
+    "node": ">= 7.6.0"
+  },
+  "license": "Apache 2.0",
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/sliss/tigerpack.git"
+  },
+  "scripts": {
+    "lint": "npm run lint",
+    "start": "node .",
+    "test": "mocha test/*.test.js"
+  }
+}
