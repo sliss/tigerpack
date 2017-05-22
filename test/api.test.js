@@ -22,6 +22,9 @@ describe('Users', function () {
   before(async function () {
     doc = {
       name: 'Bob Mueller',
+      email: "bob@fbi.gov",
+      lat: 42.253337,
+      long: -70.853208,
       year: 1966
     }
 
@@ -29,7 +32,7 @@ describe('Users', function () {
   })
 
   it('findById', async function () {
-    const { user } = await _request('get', `/users/${doc._id}`)
+    const { user } = await _request('get', `/users?user_id=${doc._id}`)
     assert.equal(user.name, 'Bob Mueller')
     assert.equal(user.year, 1966)
   })

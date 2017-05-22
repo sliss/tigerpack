@@ -11,17 +11,21 @@ module.exports = db => {
   app.use(bodyParser.json())
   app.use(bodyParser.urlencoded({ extended: false }))
 
-  app.get('/users/:id', wrap(async function (params) {
-    const { id } = params
-    const user = await db.collection('User').findOne({
-      _id: Archetype.to(id, ObjectId)
-    })
-    return { user }
-  }))
+  // ### Users
 
-  app.get('/users', wrap(async function () {
-    const users  = await db.collection('User').find().toArray()
-    return { users }
+  // get all users.  if user_id query string provided, get that user
+  app.get('/users', wrap(async function (params) {
+    if(params.hasOwnProperty('user_id')){
+      const { user_id } = params
+      const user = await db.collection('User').findOne({
+        _id: Archetype.to(user_id, ObjectId)
+      })
+      return { user }
+    }
+    else {
+      const users  = await db.collection('User').find().toArray()
+      return { users }
+    }
   }))
 
   // create a new user and return it.  if email is already taken, return existing user.
@@ -62,16 +66,25 @@ module.exports = db => {
       userObj.long = userObj.location.coordinates[0]
       delete userObj.location
 
-      return userObj
+      return {user:userObj}
     }
     else {
       sameEmail.lat = sameEmail.location.coordinates[1]
       sameEmail.long = sameEmail.location.coordinates[0]
       delete sameEmail.location
-      return sameEmail
+      return {user:sameEmail}
     }
     
   }))
+
+  
+  // ### Friends
+
+  // Get user's current friends, and potential friends who've sent the user a friend request.
+  // app.get('/friends/:id', wrap(async function (params) {
+  // const users  = await db.collection('User').find().toArray()
+  // return { users }
+  // }))
 
   return app
 }
