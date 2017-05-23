@@ -5,9 +5,9 @@ HOST: pp.apiary.io/tigerpack
 
 TigerPack API
 
+URLs for testing and production servers should be retreived from the `service_locator.json` file at `https://s3.amazonaws.com/tigerpack/service_locator.json`
 
-
-
+# Group Users
 
 ## User [/users{?user_id}]
 
@@ -20,13 +20,14 @@ Get a specific user by `user_id`.
 
 + Response 200 (application/json)
         
-        [
-            {
-                "user_id": "507f1f77bcf86cd799439011",
-                "name": "Jeff Bezos",
-                "year": 2010
-            }
-        ]
+        {
+            "user":
+                {
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "name": "Jeff Bezos",
+                    "year": 2010
+                }
+        }
 
 
 
@@ -34,22 +35,30 @@ Get a specific user by `user_id`.
 
 ### Get all users [GET]
 
-Get all users.
+Get all users.  (Might not be necessary).  See also: "Get all invitable friends"
 
 + Response 200 (application/json)
         
-        [
-            {
-                "user_id": "507f1f77bcf86cd799439011",
-                "name": "Jeff Bezos",
-                "year": 2010
-            },
-            {
-                "user_id": "bd4523423ce",
-                "name": "Bob Mueller",
-                "year": 1966
-            }
-        ]
+        {
+            "users":[
+                {
+                    "user_id": "507f1f77bcf86cd799439011",
+                    "email":"jeff@amazon.com",
+                    "name": "Jeff Bezos",
+                    "initials":"JB",
+                    "year": 2010,
+                    "friendship":"yes"
+                },
+                {
+                    "user_id": "bd4523423ce",
+                    "name": "Bob Mueller",
+                    "email":"bob@fbi.gov",
+                    "initials":"BM",
+                    "year": 1966,
+                    "friendship":"no"
+                }
+            ]
+        }
             
 ### Create User [POST]
 
@@ -68,18 +77,22 @@ Create a new user in the database as the final step in sign-up.
 + Response 201 (application/json)
 
     + Body
-
+            
             {
-                "name": "Jeff Bezos",
-                "email": "example@gmail.com",
-                "class_year": 2010
-                "last_checkin": 1495004357,
-                "latitude": 42.253337,
-                "longitude": -70.853208
+                "user":{
+                    "name": "Jeff Bezos",
+                    "user_id":"ABC4895743958EF",
+                    "initials": "JB",
+                    "email": "example@gmail.com",
+                    "year": 2010,
+                    "last_check-in": 1495004357,
+                    "lat": 42.253337,
+                    "long": -70.853208
+                }
             }
 
-
-## Friends [/user/friends/{?user_id}]
+# Group Friends
+## Friends Collection [/friends/{?user_id}]
 ### Get Friends [GET]
 
 Get user's current friends, and potential friends who've sent the user a friend request.
@@ -90,81 +103,254 @@ Get user's current friends, and potential friends who've sent the user a friend 
 + Response 200 (application/json)
 
         {
-            "incoming_invites": [
-                {
-                    "user_id":"5678765767D",
-                    "name": "Alice Boots",
-                    "year": 2010
-                },
-                {
-                    "user_id":"BA678D98676",
-                    "name": "Bob Xavier",
-                    "year": 2012
-                }
-            ],
-            "friends":[
-                {
-                    "user_id":"7430897452",
-                    "name": "Xander Albert",
-                    "year": 1998
-                },
-                {
-                    "user_id":"BA678D98676",
-                    "name": "Ace Smith",
-                    "year": 2007
-                }
-            ]
+          "friends": [
+            {
+              "_id": "5923cd98be2c591654da92f6",
+              "user_id": "5923cd98be2c591654da92f6",
+              "name": "Woodrow Wilson",
+              "initials": "WW",
+              "year": 1901
+            }
+          ],
+          "incoming_invites": [
+            {
+              "_id": "5923d3182fe1d7169b96b620",
+              "user_id": "5923d3182fe1d7169b96b620",
+              "name": "Bob Mueller",
+              "initials": "BM",
+              "year": 1967
+            }
+          ]
         }
 
-### Update friend-status [POST]
+### Remove Friend [DELETE]
 
-Set friendship status between the user and the target user.  Use to respond to friend requests or remove friends.
-`friendship` is a boolean stating whether the two users should/shouldn't end up as friends.
+Remove a friend
 
-+ Request (application/json)
-
-        {
-            "user_id": "2589B345904875",
-            "friend_id": "8790408A32"
-            "friendship": True
-        }
 
 + Response 201 (application/json)
 
     + Headers
 
             Location: /users/friends
+            
+## Friends Invitations [/friends/invitations{?user_id}]
+### Invite a friend [POST]
 
-## Check-ins [/check-ins{?user_id}]
-### Get check-ins [GET]
+Send a friend a friend-invitation.
 
-Get check-ins for each of the user's friends who have location tracking on.
++ Request (application/json)
+
+        {
+            "user_id": "asdfds32423",
+            "friend_id": "4234dsfdsdffd"
+        }
+
+
+
++ Response 200 (application/json)
+
+        {
+            "user": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          },
+          "friend": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          }
+        }
+
+### Get all invitable (potential) friends [GET]
+
+Get all users (except current user) and their friendship status vis a vis the current user.  `friendship` can be one of the following:
+`friends` for a user who is already the current user's friend 
+`none` for a user who is not the current user's friend
+`outgoing` not friend, but the current user has sent them an invite that is awaiting response
+`incoming` not friend, but has sent the current user an invite that awaits the user's response
 
 + Parameters
     + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
 
 + Response 200 (application/json)
 
-        [
-            {
-                "user_id":"5678765767D",
-                "name": "Alice Boots",
-                "year": 2010,
-                "zone": "Terrace"
-            },
-            {
-                "user_id":"2354364623",
-                "name": "Bob Cox",
-                "year": 2011,
-                "zone": "20th"
-            },
-            {
-                "user_id":"980798700",
-                "name": "Ryan Brown",
-                "year": 1999,
-                "zone": "1.4 miles"
-            }
-        ]
+        {  
+            "invitable_friends":[  
+                {  
+                    "_id":"5923cd98be2c591654da92f6",
+                    "user_id":"5923cd98be2c591654da92f6",
+                    "name":"Woodrow Wilson",
+                    "initials":"WW",
+                    "year":1901,
+                    "friendship":"friends"
+                },
+                {  
+                    "_id":"5923d3182fe1d7169b96b620",
+                    "user_id":"5923d3182fe1d7169b96b620",
+                    "name":"Bob Mueller",
+                    "initials":"BM",
+                    "year":1967,
+                    "friendship":"incoming"
+                },
+                {  
+                    "_id":"5924acc3984da71fcb10bdcc",
+                    "user_id":"5924acc3984da71fcb10bdcc",
+                    "name":"Michelle Obama",
+                    "initials":"MO",
+                    "year":1985,
+                    "friendship":"none"
+                },
+                {  
+                    "_id":"5924ad37984da71fcb10bdcd",
+                    "user_id":"5924ad37984da71fcb10bdcd",
+                    "name":"Sam Alito",
+                    "initials":"SA",
+                    "year":1982,
+                    "friendship":"outgoing"
+                }
+            ]
+        }
+        
+### Reply to an invitation [PUT]
+
+Reply to accept or decline a friend's invitation.  `accept` must be either `true` or `false`
+
++ Request (application/json)
+
+        {
+            "user_id": "asdfds32423",
+            "friend_id": "4234dsfdsdffd",
+            "accept": true
+        }
+        
++ Response 200 (application/json)
+
+        {
+          "user": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          },
+          "friend": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          }
+        }
+
+
+## Friends location-sharing [/friends/location-sharing]
+### Permit sharing with a friend [POST]
+
+Grant a friend permission to track user's precise location.  If friend reciprocates, user will be able to track friend's coordinates
+
++ Request (application/json)
+
+        {
+            "user_id": "asdfds32423",
+            "friend_id": "4234dsfdsdffd"
+        }
+        
++ Response 200 (application/json)
+
+        {
+          "user": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          },
+          "friend": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          }
+        }
+        
+### Revoke sharing from a friend [DELETE]
+
+Revoke a friend's permission to track user's precise location.  User will no longer track that friend, either.
+
++ Request (application/json)
+
+        {
+            "user_id": "asdfds32423",
+            "friend_id": "4234dsfdsdffd"
+        }
+        
++ Response 200 (application/json)
+
+        {
+          "user": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          },
+          "friend": {
+            "n": 1,
+            "nModified": 1,
+            "ok": 1
+          }
+        }
+        
+# Group Checkins
+## Check-ins [/check-ins{?user_id}]
+### Get check-ins [GET]
+
+Get check-ins for each of the user's friends who have location tracking on, and precise locations from users who've granted access
+
++ Parameters
+    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+
++ Response 200 (application/json)
+
+        {
+            "check_ins": [
+                {
+                    "user_id":"5678765767D",
+                    "name": "Alice Boots",
+                    "initials": "AB",
+                    "year": 2010,
+                    "zone": "Terrace",
+                    "distance": 0.3
+                },
+                {
+                    "user_id":"2354364623",
+                    "name": "Bob Cox",
+                    "initials": "BC",
+                    "year": 2011,
+                    "zone": "20th",
+                    "distance": 1.3
+                },
+                {
+                    "user_id":"980798700",
+                    "name": "Ryan Brown",
+                    "initials": "RB",
+                    "year": 1999,
+                    "zone": "1.4 miles",
+                    "distance":1.4
+                }
+            ],
+            "tracking": [
+                {
+                    "user_id":"3452345243",
+                    "name": "Bob Mueller",
+                    "initials": "BM",
+                    "year": 1966,
+                    "lat": 42.253337,
+                    "long": -70.853208
+                },
+                {
+                    "user_id":"AF3423E",
+                    "name": "Ted Cruz",
+                    "initials": "TC",
+                    "year": 1972,
+                    "lat": 42.253337,
+                    "long": -70.853208
+                }
+            ]
+        }
 
 ### Send check-in [POST]
 
@@ -199,54 +385,20 @@ Delete user's check-in from server.
     + Headers
 
             Location: /check-ins
+# Group Config
+## Config [/config]
 
-            
-## Groups [/groups/{user_id}]
-+ Parameters
-    + user_id (required, string, `507f1f77bcf86cd799439011`) ... ID of the user in form of a string
+### Get configuration settings [GET]
 
-### Get Groups [GET]
-
-Get all group chats the user is a member of.  A group chat's `members` field excudes the current user
+Get configuration settings from server.  This allows settings to be adjusted server-side without requiring app updates.
 
 + Response 200 (application/json)
-
-        [
-            {
-                "group_id": "507f1f77bcf86cd799439011",
-                "name": "Ski Team",
-                "members": [
-                    {
-                        "name":"Jeff Bezos",
-                        "user_id":"507f1f77bcf86cd799439011",
-                        "initials":"JB",
-                        "class_year":2010
-                    },
-                    {
-                        "name":"Bob Smith",
-                        "user_id":"507f1f77bcf86cd799439012",
-                        "initials":"BS",
-                        "class_year":2007
-                    }
-                
-                ]
-            }
-        ]
-
-### Create Group [POST]
-
-Create a new user in the database as the final step in sign-up.
-
-+ Request (application/json)
-
+        
         {
-            "name": "Ski team"
-        }
-
-+ Response 201 (application/json)
-
-    + Body
-
-            {
-                
+            "config": {
+                "send_check_in_frequency": 60,
+                "get_check_in_frequency": 60,
+                "get_geo_check_in_frequency": 60,
+                "send_geo_check_in_frequency": 60,
             }
+        }
