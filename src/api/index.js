@@ -83,36 +83,109 @@ module.exports = db => {
   // Invite a friend
   app.post('/friends/invitation', wrap(async function (body) {
     let {user_id, friend_id} = body
+    console.log('invite friend', body)
 
     // save friend_id to user's outgoing_friend_ids
+    const user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$addToSet:{outgoing_friend_ids: friend_id}}
+    )
 
     // save user_id to friend's incoming_friend_ids
-    return {}
+    const friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$addToSet:{incoming_friend_ids: user_id}}
+    )
+
+    return {user, friend}
   }))
 
   // Respond to a friend invitation
   app.put('/friends/invitation', wrap(async function (body) {
+    console.log('respond to invite', body)
     let {user_id, friend_id, accept} = body
-
+    let user, friend
     // if accepting invitation
-    // remove friend_id from user's incoming_friend_ids; add to user's friend_ids
-    // remove friend_id from user's incoming_friend_ids; add to user's friend_ids
+    if(accept){
+      console.log('accept friend')
+      // remove friend_id from user's incoming_friend_ids; add to user's friend_ids
+      user = await db.collection('User').update(
+        {_id: Archetype.to(user_id, ObjectId)},
+        {$pull:{incoming_friend_ids: friend_id}}
+      )
 
-    // if not accepting invitation
-    // remove friend_id from user's incoming_friend_ids
-    // remove user_id from friend's outgoing_friend_ids
-    return {}
+      user = await db.collection('User').update( // ought to be able to combine update ops, but didn't work...
+        {_id: Archetype.to(user_id, ObjectId)},
+        {$addToSet:{friend_ids: friend_id}}
+      )
+      
+
+      // remove user_id from friend's outgoing_friend_ids; add user_id to friend's friend_ids
+      friend = await db.collection('User').update(
+        {_id: Archetype.to(friend_id, ObjectId)},
+        {$pull:{outgoing_friend_ids: user_id}},
+        {$addToSet:{friend_ids: user_id}}
+      )
+
+      friend = await db.collection('User').update(
+        {_id: Archetype.to(friend_id, ObjectId)},
+        {$addToSet:{friend_ids: user_id}}
+      )
+    }
+    // reject invitation
+    else {
+      console.log('reject friend')
+
+      // remove friend_id from user's incoming_friend_ids
+      user = await db.collection('User').update(
+        {_id: Archetype.to(user_id, ObjectId)},
+        {$pull:{incoming_friend_ids: friend_id}}
+      )
+
+      // remove user_id from friend's outgoing_friend_ids
+      friend = await db.collection('User').update(
+        {_id: Archetype.to(friend_id, ObjectId)},
+        {$pull:{outgoing_friend_ids: user_id}}
+      )
+    }
+
+    return {user, friend}
   }))
 
   // Remove a friend
   app.delete('/friends', wrap(async function (body) {
+    console.log('delete friend', body)
     let {user_id, friend_id} = body
+    let user, friend
 
-    // remove friend_id from user's friend_ids, tracking_ids, sharing_ids, trackable_ids
-
+    // remove friend_id from user's friend_ids, sharing_ids, trackable_ids
+    user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$pull:{friend_ids: friend_id}}
+    )
+    user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$pull:{sharing_ids: friend_id}}
+    )
+    user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$pull:{trackable_ids: friend_id}}
+    )
     // remove user_id from friend's friend_ids, sharing_ids, trackable_ids
+    friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$pull:{friend_ids: user_id}}
+    )
+    friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$pull:{sharing_ids: user_id}}
+    )
+    friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$pull:{trackable_ids: user_id}}
+    )
 
-    return {}
+    return {user, friend}
   }))
 
   // Grant map-sharing permission to a friend
