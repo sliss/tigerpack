@@ -356,6 +356,50 @@ module.exports = db => {
     return {config}
   }))
 
+  // ### Admin
+  // ## create zone
+  app.post('/zones', wrap(async function (body) {
+    let { zone_name, coords } = body
+    let objId = new ObjectId()
+    let geoPairs = []
+    let centroid = [0,0]
+
+    coords = coords.split(',')
+    coords = coords.map((coord) => parseFloat(coord))
+    console.log('coords', coords)
+
+    // create geoJSON coord array
+    for(let i = 0; i < coords.length; i+=2){
+      geoPairs.push([coords[i+1], coords[i]])
+      centroid[0] += coords[i+1]
+      centroid[1] += coords[i]
+      console.log('curr centroid:', centroid)
+      
+    }
+
+    // calculate centroid
+    centroid[0] /= (coords.length/2)
+    centroid[1] /= (coords.length/2)
+
+    const doc = {
+      _id: objId,
+      zone_id: objId.toHexString(),
+      zone_name: zone_name,
+      centroid: {
+        type: "Point",
+        coordinates: centroid
+      },
+      border: {
+        type: "Polygon",
+        coordinates: geoPairs
+      }
+    }
+
+    const zone  = await db.collection('Zone').insert(doc)
+
+    return {zone}
+  }))
+
   return app
 }
 
