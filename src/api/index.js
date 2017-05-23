@@ -13,7 +13,7 @@ module.exports = db => {
 
   // ### Users
 
-  // get all users.  if user_id query string provided, get that user
+  // ## get all users.  if user_id query string provided, get that user
   app.get('/users', wrap(async function (params) {
     if(params.hasOwnProperty('user_id')){
       const { user_id } = params
@@ -28,7 +28,7 @@ module.exports = db => {
     }
   }))
 
-  // create a new user and return it.  if email is already taken, return existing user.
+  // ## create a new user and return it.  if email is already taken, return existing user.
   app.post('/users', wrap(async function (body) {
     let {name, email, year, lat, long} = body
 
@@ -81,7 +81,7 @@ module.exports = db => {
   
   // ### Friends
 
-  // Invite a friend
+  // ## Invite a friend
   app.post('/friends/invitations', wrap(async function (body) {
     let {user_id, friend_id} = body
     console.log('invite friend', body)
@@ -101,7 +101,7 @@ module.exports = db => {
     return {user, friend}
   }))
 
-  // Respond to a friend invitation
+  // ## Respond to a friend invitation
   app.put('/friends/invitations', wrap(async function (body) {
     console.log('respond to invite', body)
     let {user_id, friend_id, accept} = body
@@ -153,7 +153,7 @@ module.exports = db => {
     return {user, friend}
   }))
 
-  // Remove a friend
+  // ## Remove a friend
   app.delete('/friends', wrap(async function (body) {
     console.log('delete friend', body)
     let {user_id, friend_id} = body
@@ -189,27 +189,48 @@ module.exports = db => {
     return {user, friend}
   }))
 
-  // Grant map-sharing permission to a friend
+  // ## Grant map-sharing permission to a friend
   app.post('/friends/location-sharing', wrap(async function (body) {
+    console.log('grant location sharing', body)
     let {user_id, friend_id} = body
 
     // save friend_id to user's sharing_ids
+    let user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$addToSet:{sharing_ids: friend_id}}
+    )
+    
     // save user_id to friend's trackable_ids
+    let friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$addToSet:{trackable_ids: user_id}}
+    )
 
-    return {}
+    return {user, friend}
   }))
 
-  // Revoke map-sharing permission to a friend
+  // ## Revoke map-sharing permission to a friend
   app.delete('/friends/location-sharing', wrap(async function (body) {
+    console.log('revoke location sharing', body)
+
     let {user_id, friend_id} = body
 
     // remove friend_id from user's sharing_ids
-    // remove user_id from friend's trackable_ids
+    let user = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {$pull:{sharing_ids: friend_id}}
+    )
 
-    return {}
+    // remove user_id from friend's trackable_ids
+    let friend = await db.collection('User').update(
+      {_id: Archetype.to(friend_id, ObjectId)},
+      {$pull:{trackable_ids: user_id}}
+    )
+
+    return {user, friend}
   }))
 
-  // Get user's current friends, and potential friends who've sent the user a friend request.
+  // ## Get user's current friends, and potential friends who've sent the user a friend request.
   app.get('/friends', wrap(async function (params) {
     console.log('get friends for', params)
 
@@ -233,7 +254,7 @@ module.exports = db => {
     return { friends, incoming_invites }
   }))
 
-  // get all invitable (potential) friends and their friendship status vis a vis the current user
+  // ## get all invitable (potential) friends and their friendship status vis a vis the current user
   app.get('/friends/invitations', wrap(async function (params) {
     console.log('get all invitable friends for', params)
     const { user_id } = params
@@ -278,7 +299,7 @@ module.exports = db => {
 
   // ### Check-ins
 
-  // get check-ins from all friends.  get tracking coords from intersection of trackable_ids and sharing_ids
+  // ## get check-ins from all friends.  get tracking coords from intersection of trackable_ids and sharing_ids
   app.get('/check-ins', wrap(async function (params) {
     const { user_id } = params
     const user = await db.collection('User').findOne({
@@ -323,7 +344,7 @@ module.exports = db => {
 
   // ### Config
 
-  // get config info
+  // ## get config info
   app.get('/config', wrap(async function () {
     const config = {
       send_check_in_frequency: 60,
