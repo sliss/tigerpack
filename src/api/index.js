@@ -50,7 +50,8 @@ module.exports = db => {
       friend_ids:[],
       outgoing_friend_ids:[],
       incoming_friend_ids:[],
-      super_friend_ids:[]
+      trackable_ids:[],
+      sharing_ids:[]
     }
 
     // if email is taken, do not create new user; instead return existing user
@@ -81,7 +82,7 @@ module.exports = db => {
   // ### Friends
 
   // Invite a friend
-  app.post('/friends/invitation', wrap(async function (body) {
+  app.post('/friends/invitations', wrap(async function (body) {
     let {user_id, friend_id} = body
     console.log('invite friend', body)
 
@@ -101,7 +102,7 @@ module.exports = db => {
   }))
 
   // Respond to a friend invitation
-  app.put('/friends/invitation', wrap(async function (body) {
+  app.put('/friends/invitations', wrap(async function (body) {
     console.log('respond to invite', body)
     let {user_id, friend_id, accept} = body
     let user, friend
@@ -210,6 +211,10 @@ module.exports = db => {
 
   // Get user's current friends, and potential friends who've sent the user a friend request.
   app.get('/friends', wrap(async function (params) {
+    console.log('get friends for', params)
+
+    // get only fields enumerated in the projection
+    const friendProjection = {user_id:1, name:1, initials:1, year:1}
     const { user_id } = params
     const user = await db.collection('User').findOne({
       _id: Archetype.to(user_id, ObjectId)
@@ -219,13 +224,56 @@ module.exports = db => {
     const {incoming_friend_ids, friend_ids} = user
     console.log('incoming_friend_ids', incoming_friend_ids)
 
-    const incomingFriends = await db.collection('User').find({_id:{$in:incoming_friend_ids}}).toArray()
-    console.log('incomingFriends', incomingFriends)
+    const incoming_invites = await db.collection('User').find({user_id:{$in:incoming_friend_ids}}, friendProjection).toArray()
+    console.log('incomingFriends', incoming_invites)
 
-    const friends = await db.collection('User').find({_id:{$in:friend_ids}}).toArray()
+    const friends = await db.collection('User').find({user_id:{$in:friend_ids}}, friendProjection).toArray()
     console.log('friends', friends)
 
-    return { friends }
+    return { friends, incoming_invites }
+  }))
+
+  // get all invitable (potential) friends and their friendship status vis a vis the current user
+  app.get('/friends/invitations', wrap(async function (params) {
+    console.log('get all invitable friends for', params)
+    const { user_id } = params
+
+    const currentUser = await db.collection('User').findOne({
+      _id: Archetype.to(user_id, ObjectId)
+    })
+
+    // sort user fields to reduce search time for each user
+    currentUser.friend_ids = currentUser.friend_ids.sort()
+    currentUser.incoming_friend_ids = currentUser.incoming_friend_ids.sort()
+    currentUser.outgoing_friend_ids = currentUser.outgoing_friend_ids.sort()
+
+    const userProjection = {user_id:1, name:1, initials:1, year:1}
+    // start by getting *all* users
+    const friends  = await db.collection('User').find({_id:{$ne: Archetype.to(user_id, ObjectId)}}, userProjection).toArray()
+    console.log('all users except current', currentUser)
+    
+    for(let friend of friends){
+      console.log('the itarated friend', friend)
+      // existing friend
+      if(currentUser.friend_ids.includes(friend.user_id)){
+        friend.friendship = 'friends'
+      }
+      // friend has invited this user
+      else if(currentUser.incoming_friend_ids.includes(friend.user_id)){
+        friend.friendship = 'incoming'
+      }
+      // user has invited this friend
+      else if(currentUser.outgoing_friend_ids.includes(friend.user_id)){
+        friend.friendship = 'outgoing'
+      }
+      // user has no friendship with this friend
+      else {
+        friend.friendship = 'none'
+      }
+    }
+
+
+    return { invitable_friends:friends }
   }))
 
   // ### Check-ins
