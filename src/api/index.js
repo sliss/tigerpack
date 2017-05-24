@@ -2,6 +2,7 @@
 
 const Archetype = require('archetype-js')
 const { ObjectId } = require('mongodb')
+const turf = require('turf');
 const express = require('express')
 const bodyParser = require('body-parser')
 const utils = require('../utils/utils')
@@ -305,18 +306,38 @@ module.exports = db => {
     const user = await db.collection('User').findOne({
       _id: Archetype.to(user_id, ObjectId)
     })
-    console.log('user', user)
 
-    const {friend_ids, trackable_ids, sharing_ids} = user
+    const {friend_ids, trackable_ids, sharing_ids, location} = user
 
-    // TODO: distance calculations from user to each checkin
+    // get all friends' check-ins
+    let all_check_ins = await db.collection('CheckIn').find({
+      user_id:{$in:friend_ids}
+    }).toArray()
 
-    // get all checkins that contain a friend_id
+    // build checkin list. add/subtract fields as necessary for client
+    let check_ins = []
+    for(let checkIn of all_check_ins){
+      checkIn.distance = turf.distance(location.coordinates, checkIn.location.coordinates, "miles")
+      checkIn.initials = utils.initialsOf(checkIn.name)
+      const {user_id, name, initials, year, zone_name, distance} = checkIn
+      check_ins.push({user_id, name, initials, year, zone_name, distance})
+    }
 
     // for the trackable_ids the user wishes to share/see, output trackings
+    let trackings = []
+    for(let tracking of all_check_ins){
+      // if user has tracking permission for this user
+      if(trackable_ids.includes(tracking.user_id)){
+        tracking.initals = utils.initialsOf(tracking.name)
+        tracking.lat = tracking.location.coordinates[1]
+        tracking.long = tracking.location.coordinates[0]
+        const {user_id, name, initials, year, lat, long} = tracking
+        trackings.push({user_id, name, initials, year, lat, long})
+      }
+    }
     
 
-    return { /*stuff*/ }
+    return { check_ins, trackings }
   }))
 
   // TODO
