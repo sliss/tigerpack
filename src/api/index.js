@@ -319,8 +319,27 @@ module.exports = db => {
     for(let checkIn of all_check_ins){
       checkIn.distance = turf.distance(location.coordinates, checkIn.location.coordinates, "miles")
       checkIn.initials = utils.initialsOf(checkIn.name)
-      const {user_id, name, initials, year, zone_name, distance} = checkIn
-      check_ins.push({user_id, name, initials, year, zone_name, distance})
+      const sharingWith = user.sharing_ids.includes(checkIn.user_id)
+      const tracking = user.trackable_ids.includes(checkIn.user_id)
+      let status
+
+      if(sharingWith && tracking){
+        status = 'mutual'
+      }
+      else if(sharingWith){
+        status = 'outgoing'
+      }
+      else if(tracking){
+        status = 'incoming'
+      }
+      else {
+        status = 'none'
+      }
+
+      checkIn.sharing_status = status
+
+      const {user_id, name, initials, year, zone_name, distance, sharing_status} = checkIn
+      check_ins.push({user_id, name, initials, year, zone_name, distance, sharing_status})
     }
 
     // for the trackable_ids the user wishes to share/see, output trackings
@@ -337,7 +356,7 @@ module.exports = db => {
     }
     
 
-    return { user, check_ins, trackings }
+    return {check_ins, trackings }
   }))
 
   // TODO
