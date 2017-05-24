@@ -46,7 +46,7 @@ module.exports = db => {
       last_check_in_time: 0,
       location: {
         type: "Point",
-        coordinates:[long,lat]
+        coordinates:[-74.659413,40.348598]
       },
       friend_ids:[],
       outgoing_friend_ids:[],
@@ -314,10 +314,15 @@ module.exports = db => {
       user_id:{$in:friend_ids}
     }).toArray()
 
+    // console.log('all checkins', all_check_ins)
     // build checkin list. add/subtract fields as necessary for client
     let check_ins = []
     for(let checkIn of all_check_ins){
+      console.log('checkin:', checkIn)
+
       checkIn.distance = turf.distance(location.coordinates, checkIn.location.coordinates, "miles")
+      console.log('checkin distance:', checkIn.distance)
+
       checkIn.initials = utils.initialsOf(checkIn.name)
       const sharingWith = user.sharing_ids.includes(checkIn.user_id)
       const tracking = user.trackable_ids.includes(checkIn.user_id)
@@ -408,6 +413,20 @@ module.exports = db => {
     const check_in = await db.collection('CheckIn').update(
       {user_id:user.user_id},
       doc,
+      {upsert:true}
+    )
+
+    // update user's location
+    const saveUser = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {
+        $set: {
+          location: {
+            type: 'Point',
+            coordinates: geoCoords
+          }
+        }
+      },
       {upsert:true}
     )
 
