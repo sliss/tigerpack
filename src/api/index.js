@@ -337,7 +337,7 @@ module.exports = db => {
     }
     
 
-    return { check_ins, trackings }
+    return { user, check_ins, trackings }
   }))
 
   // TODO
