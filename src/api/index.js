@@ -375,12 +375,13 @@ module.exports = db => {
   }))
 
   // delete check-in
-  app.delete('/check-ins', wrap(async function (params) {
-    const { user_id } = params
+  app.delete('/check-ins', wrap(async function (body) {
+    const { user_id } = body
     
     // delete user's check-in 
+    const check_in = await db.collection('CheckIn').deleteOne({user_id:user_id})
 
-    return {}
+    return {check_in}
   }))
 
 
