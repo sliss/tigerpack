@@ -309,6 +309,8 @@ module.exports = db => {
 
     const {friend_ids, trackable_ids, sharing_ids} = user
 
+    // TODO: distance calculations from user to each checkin
+
     // get all checkins that contain a friend_id
 
     // for the trackable_ids the user wishes to share/see, output trackings
@@ -321,15 +323,55 @@ module.exports = db => {
   // post check-in
   app.post('/check-ins', wrap(async function (body) {
     const { user_id, lat, long } = body
+    const geoCoords = [parseFloat(long),parseFloat(lat)]
 
-    // upsert check-in doc.  db only stores the single most recent check-in
+    const user = await db.collection('User').findOne({
+      _id: Archetype.to(user_id, ObjectId)
+    })
+
+    // find which zone (if any) user's coords intersect
+    const zone = await db.collection('Zone').findOne({
+      border: {
+        $geoIntersects: {
+          $geometry: {
+            type: "Point",
+            coordinates: geoCoords
+          }
+        }
+      }
+    })
+
+    console.log('intersecting zone result:', zone)
+
+    // create check_in doc, save to DB
+    const objId = new ObjectId()
+    let doc = {
+      check_in_id: objId.toHexString(),
+      user_id: user_id,
+      name: user.name,
+      year: user.year,
+      location: {
+        type: "Point",
+        coordinates: geoCoords
+      },
+      timestamp:objId.getTimestamp(),
+      zone_id: null,
+      zone_name: null
+    }
+
+    // user is not within a zone, leave zone fields null
+    if(zone != null){
+      doc.zone_id = zone.zone_id
+      doc.zone_name = zone.zone_name
+    }
     
-    // ****** TODO: Zone magic ***************
+    const check_in = await db.collection('CheckIn').update(
+      {user_id:user.user_id},
+      doc,
+      {upsert:true}
+    )
 
-    const check_in = await db.collection('CheckIn').insert(doc)
-    let checkInObj = check_in.ops[0]
-
-    return {}
+    return {check_in}
   }))
 
   // delete check-in
@@ -359,27 +401,21 @@ module.exports = db => {
   // ### Admin
   // ## create zone
   app.post('/zones', wrap(async function (body) {
-    let { zone_name, coords } = body
+    let { zone_name, coordinates } = body
     let objId = new ObjectId()
-    let geoPairs = []
     let centroid = [0,0]
-
-    coords = coords.split(',')
-    coords = coords.map((coord) => parseFloat(coord))
-    console.log('coords', coords)
-
-    // create geoJSON coord array
-    for(let i = 0; i < coords.length; i+=2){
-      geoPairs.push([coords[i+1], coords[i]])
-      centroid[0] += coords[i+1]
-      centroid[1] += coords[i]
+    
+    // calculate centroid
+    for(let i = 0; i < coordinates.length-2; i+=2){
+      geoPairs.push([coordinates[i+1], coordinates[i]])
+      centroid[0] += coordinates[i+1]
+      centroid[1] += coordinates[i]
       console.log('curr centroid:', centroid)
       
     }
 
-    // calculate centroid
-    centroid[0] /= (coords.length/2)
-    centroid[1] /= (coords.length/2)
+    centroid[0] /= ((coordinates.length-2)/2)
+    centroid[1] /= ((coordinates.length-2)/2)
 
     const doc = {
       _id: objId,
@@ -391,7 +427,7 @@ module.exports = db => {
       },
       border: {
         type: "Polygon",
-        coordinates: geoPairs
+        coordinates: coordinates
       }
     }
 
