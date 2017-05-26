@@ -528,11 +528,11 @@ module.exports = db => {
     
     // calculate centroid
     for(let i = 0; i < coordinates.length; i++){
-      centroid[0] += parseFloat(coordinates[i][1])
-      centroid[1] += parseFloat(coordinates[i][0])
+      centroid[0] += parseFloat(coordinates[i][0])
+      centroid[1] += parseFloat(coordinates[i][1])
       
     }
-    
+
     centroid[0] /= coordinates.length
     centroid[1] /= coordinates.length
 
