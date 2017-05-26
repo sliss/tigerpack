@@ -369,6 +369,7 @@ module.exports = db => {
   // TODO
   // post check-in
   app.post('/check-ins', wrap(async function (body) {
+    console.log('create checkin for', body)
     const { user_id, lat, long } = body
     const geoCoords = [parseFloat(long),parseFloat(lat)]
 
@@ -546,7 +547,7 @@ module.exports = db => {
       },
       border: {
         type: "Polygon",
-        coordinates: coordinates
+        coordinates: [coordinates]
       }
     }
 
