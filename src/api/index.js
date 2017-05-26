@@ -52,7 +52,9 @@ module.exports = db => {
       outgoing_friend_ids:[],
       incoming_friend_ids:[],
       trackable_ids:[],
-      sharing_ids:[]
+      sharing_ids:[],
+      group_ids:[],
+      incoming_group_ids:[]
     }
 
     // if email is taken, do not create new user; instead return existing user
@@ -458,6 +460,65 @@ module.exports = db => {
     return {config}
   }))
 
+  // ### Chat Groups
+
+  // ## create new chat group
+  app.post('/groups', wrap(async function (body) {
+    let {user_id, group_name} = body
+    console.log('create group', body)
+    const objId = new ObjectId()
+    const groupDoc = {
+      _id: objId,
+      group_id: objId.toHexString(),
+      group_name: group_name,
+      member_ids: [user_id]
+    }
+
+    const group = await db.collection('Group').insert(groupDoc)
+
+    return {group}
+  }))
+
+  // ## get user's groups
+  app.get('/groups', wrap(async function (params) {
+    let {user_id} = params
+    console.log('get groups for', user_id)
+
+    const user = await db.collection('User').findOne({
+      _id: Archetype.to(user_id, ObjectId)
+    })
+
+    const groups = await db.collection('Group').find({
+      user_id:{$in:user.group_ids}
+    }).toArray()
+
+    console.log('groups:', groups)
+
+    return {groups}
+  }))
+
+
+  // invite friends to chat group
+  app.post('/groups/invitations', wrap(async function (body) {
+    let {user_id, group_id, friend_ids} = body
+  
+    return {}
+  }))
+
+  // accept invite to chat group
+  app.put('/groups/invitations', wrap(async function (body) {
+    let {user_id, group_id} = body
+  
+    return {}
+  }))
+
+  // leave chat group
+  app.delete('/groups/invitations', wrap(async function (body) {
+    let {user_id, group_id} = body
+  
+    return {}
+  }))
+
   // ### Admin
   // ## create zone
   app.post('/zones', wrap(async function (body) {
@@ -466,16 +527,14 @@ module.exports = db => {
     let centroid = [0,0]
     
     // calculate centroid
-    for(let i = 0; i < coordinates.length-2; i+=2){
-      geoPairs.push([coordinates[i+1], coordinates[i]])
-      centroid[0] += coordinates[i+1]
-      centroid[1] += coordinates[i]
-      console.log('curr centroid:', centroid)
+    for(let i = 0; i < coordinates.length; i++){
+      centroid[0] += parseFloat(coordinates[i][1])
+      centroid[1] += parseFloat(coordinates[i][0])
       
     }
-
-    centroid[0] /= ((coordinates.length-2)/2)
-    centroid[1] /= ((coordinates.length-2)/2)
+    
+    centroid[0] /= coordinates.length
+    centroid[1] /= coordinates.length
 
     const doc = {
       _id: objId,
