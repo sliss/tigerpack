@@ -343,6 +343,10 @@ module.exports = db => {
         status = 'none'
       }
 
+      if(checkIn.zone_name == null){
+        checkIn.zone_name = checkIn.distance.toFixed(1).toString() + ' mi'
+      }
+
       checkIn.sharing_status = status
 
       const {user_id, name, initials, year, zone_name, distance, sharing_status} = checkIn
