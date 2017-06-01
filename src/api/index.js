@@ -5,6 +5,8 @@ const { ObjectId } = require('mongodb')
 const turf = require('turf');
 const express = require('express')
 const bodyParser = require('body-parser')
+
+const notifications = require('./notifications')
 const utils = require('../utils/utils')
 
 module.exports = db => {
@@ -31,6 +33,7 @@ module.exports = db => {
 
   // ## create a new user and return it.  if email is already taken, return existing user.
   app.post('/users', wrap(async function (body) {
+    console.log('creat user:', body)
     let {name, email, year, lat, long} = body
 
     // create new user document
@@ -54,7 +57,8 @@ module.exports = db => {
       trackable_ids:[],
       sharing_ids:[],
       group_ids:[],
-      incoming_group_ids:[]
+      incoming_group_ids:[],
+      firebase_token:null
     }
 
     // if email is taken, do not create new user; instead return existing user
@@ -81,6 +85,21 @@ module.exports = db => {
     
   }))
 
+// ## update user w firebase key
+  app.put('/users', wrap(async function (body) {
+    console.log('update user:', body)
+    let {user_id, firebase_token} = body
+
+    const user  = await db.collection('User').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {
+        $set: {
+          firebase_token: firebase_token}
+      }
+    )
+    return { user }
+  }))
+
   
   // ### Friends
 
@@ -90,16 +109,33 @@ module.exports = db => {
     console.log('invite friend', body)
 
     // save friend_id to user's outgoing_friend_ids
-    const user = await db.collection('User').update(
+    let user = await db.collection('User').update(
       {_id: Archetype.to(user_id, ObjectId)},
       {$addToSet:{outgoing_friend_ids: friend_id}}
     )
 
     // save user_id to friend's incoming_friend_ids
-    const friend = await db.collection('User').update(
+    let friend = await db.collection('User').update(
       {_id: Archetype.to(friend_id, ObjectId)},
       {$addToSet:{incoming_friend_ids: user_id}}
     )
+
+    friend = await db.collection('User').findOne(
+      {_id: Archetype.to(friend_id, ObjectId)}
+    )
+
+    // if friend has fb token, send new-friend push notification
+    if(true){//if(friend.firebase_token){
+      user = await db.collection('User').findOne(
+        {_id: Archetype.to(user_id, ObjectId)}
+      )
+    
+      console.log('friend', friend)
+
+      const title = 'New friend request'
+      const body = `${friend.name}, ${friend.class} wants to join your pack!`
+      await notifications.sendNotification(friend.firebase_token, title, body)
+    }
 
     return {user, friend}
   }))
@@ -319,6 +355,8 @@ module.exports = db => {
     // console.log('all checkins', all_check_ins)
     // build checkin list. add/subtract fields as necessary for client
     let check_ins = []
+    let allZones = []
+    
     for(let checkIn of all_check_ins){
       console.log('checkin:', checkIn)
 
@@ -502,20 +540,57 @@ module.exports = db => {
   // invite friends to chat group
   app.post('/groups/invitations', wrap(async function (body) {
     let {user_id, group_id, friend_ids} = body
+
+    // add the group_id of the invitation to all the friends the user has invited
+    invited_friends = await db.collection('User').update(
+      {user_id:{$in:friend_ids}},
+      {
+        $addToSet:{incoming_group_ids: group_id}
+      }
+    )
+
+    group = await db.collection('Group').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {
+        $addToSet:{
+          pending_member_ids: {
+            $each: friend_ids
+          }
+        }
+      }
+    )
   
-    return {}
+    return {invited_friends}
   }))
 
-  // accept invite to chat group
+  // accept/decline invite to chat group
   app.put('/groups/invitations', wrap(async function (body) {
-    let {user_id, group_id} = body
+    let {user_id, group_id, accept} = body
   
+    if(accept){
+
+    }
+    else {
+
+    }
+
+
+    // regardless, remove user from group's pending_member_ids
+    await db.collection('Group').update(
+      {_id: Archetype.to(user_id, ObjectId)},
+      {
+        $pull:{pending_member_ids: user_id}
+      }
+    )    
+
     return {}
   }))
 
   // leave chat group
   app.delete('/groups/invitations', wrap(async function (body) {
     let {user_id, group_id} = body
+
+
   
     return {}
   }))

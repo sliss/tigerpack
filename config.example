@@ -1,4 +1,6 @@
 module.exports = {
     port: 3000,
-    db:'tigerpack'
+    db:'tigerpack',
+    firebase_url:"https://fcm.googleapis.com/fcm/send",
+    firebase_server_key:"abc123EFG"
 };
