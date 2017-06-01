@@ -130,10 +130,11 @@ module.exports = db => {
         {_id: Archetype.to(user_id, ObjectId)}
       )
     
+      console.log('sending user', user)
       console.log('friend', friend)
 
       const title = 'New friend request'
-      const body = `${friend.name}, ${friend.class} wants to join your pack!`
+      const body = `${user.name} ${user.year} wants to join your pack!`
       await notifications.sendNotification(friend.firebase_token, title, body)
     }
 
@@ -146,8 +147,8 @@ module.exports = db => {
     let {user_id, friend_id, accept} = body
     let user, friend
     // if accepting invitation
-    if(accept){
-      console.log('accept friend')
+    if(accept==true){
+      console.log('accept friend', friend_id)
       // remove friend_id from user's incoming_friend_ids; add to user's friend_ids
       user = await db.collection('User').update(
         {_id: Archetype.to(user_id, ObjectId)},
