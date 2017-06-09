@@ -45,7 +45,7 @@ module.exports = db => {
       name: name,
       initials: utils.initialsOf(name),
       email: email,
-      year: year,
+      year: parseInt(year),
       last_check_in_time: 0,
       location: {
         type: "Point",
